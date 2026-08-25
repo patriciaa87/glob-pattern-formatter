@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "globfmt"
+version = "0.1.0"
+description = "Strict-by-default normalizer for glob pattern lists"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "patriciaa87" }]
+
+[project.scripts]
+globfmt = "globfmt.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
