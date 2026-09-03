@@ -34,10 +34,15 @@ guessed at. Pass `--lenient` to have it repair what it safely can:
 ```
 $ python -m globfmt --lenient patterns.txt
 src/**/*.py
-build/output/*.log
+build/output\*.log
 src/utils/*.js
 *.{ts,tsx}
 ```
+
+Notice the second line only lost its first backslash. The one before `*`
+matches the escape lookahead (`\*` is a valid escaped literal asterisk), so
+lenient mode keeps it rather than assuming it was also meant as a path
+separator - see "Why strict-by-default" below.
 
 It also reads stdin:
 
