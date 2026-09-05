@@ -56,6 +56,38 @@ almost never matches what the author meant, so lenient mode escapes the
 stray bracket into a literal rather than trying to guess where the class
 was supposed to end.
 
+## CI use: --check and --diff
+
+`--check` exits with status 1 if any pattern isn't already normalized,
+without printing the normalized patterns to stdout - useful as a CI gate
+that fails when someone commits a messy pattern file:
+
+```
+$ python -m globfmt --check patterns.txt
+patterns.txt:1: redundant leading './': './src/**/*.py'
+pattern(s) rejected; rerun with --lenient to auto-repair them
+```
+
+`--diff` shows what would change, as a unified diff, again without
+touching the file or printing normalized output on its own:
+
+```
+$ python -m globfmt --diff --lenient patterns.txt
+--- patterns.txt
++++ patterns.txt
+@@ -1,3 +1,3 @@
+-./src/**/*.py
+-build\output\*.log
+-src//utils/*.js
++src/**/*.py
++build/output\*.log
++src/utils/*.js
+```
+
+Both flags respect `--lenient`: without it, only patterns strict mode
+already rejects count as "not normalized"; with it, anything lenient
+mode would rewrite counts too.
+
 ## Why strict-by-default
 
 A backslash in a glob is genuinely ambiguous - it might be escaping the
