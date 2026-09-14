@@ -134,6 +134,39 @@ class BraceTests(unittest.TestCase):
         self.assertEqual(normalize_pattern(r"literal\{brace"), r"literal\{brace")
 
 
+class BraceAlternationTests(unittest.TestCase):
+    def test_strict_rejects_duplicate_branch(self):
+        with self.assertRaises(GlobSyntaxError):
+            normalize_pattern("*.{ts,ts,tsx}")
+
+    def test_lenient_dedups_duplicate_branch(self):
+        self.assertEqual(normalize_pattern("*.{ts,ts,tsx}", lenient=True), "*.{ts,tsx}")
+
+    def test_lenient_dedups_preserving_first_occurrence_order(self):
+        self.assertEqual(normalize_pattern("{b,a,b,a,c}", lenient=True), "{b,a,c}")
+
+    def test_strict_rejects_single_branch_group(self):
+        with self.assertRaises(GlobSyntaxError):
+            normalize_pattern("{foo}")
+
+    def test_lenient_flattens_single_branch_group(self):
+        self.assertEqual(normalize_pattern("{foo}", lenient=True), "foo")
+
+    def test_lenient_flattens_single_branch_group_mid_pattern(self):
+        self.assertEqual(normalize_pattern("src/{only}/*.py", lenient=True), "src/only/*.py")
+
+    def test_lenient_flattens_group_that_dedups_to_one_branch(self):
+        self.assertEqual(normalize_pattern("*.{ts,ts}", lenient=True), "*.ts")
+
+    def test_two_or_more_distinct_branches_unchanged(self):
+        self.assertEqual(normalize_pattern("*.{ts,tsx}"), "*.{ts,tsx}")
+
+    def test_multiple_groups_each_normalized(self):
+        self.assertEqual(
+            normalize_pattern("{a,a}/{b,c,b}", lenient=True), "a/{b,c}"
+        )
+
+
 class ErrorDetailTests(unittest.TestCase):
     def test_error_carries_original_pattern(self):
         try:

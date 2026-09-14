@@ -56,6 +56,16 @@ almost never matches what the author meant, so lenient mode escapes the
 stray bracket into a literal rather than trying to guess where the class
 was supposed to end.
 
+Brace alternation gets the same strict/lenient treatment. A duplicate
+branch or a group left with only one branch after edits both parse fine,
+but they're not the canonical form:
+
+```
+$ printf '*.{ts,ts,tsx}\nsrc/{only}/*.py\n' | python -m globfmt --lenient
+*.{ts,tsx}
+src/only/*.py
+```
+
 ## CI use: --check and --diff
 
 `--check` exits with status 1 if any pattern isn't already normalized,
@@ -103,7 +113,8 @@ being silently rewritten in a way the author didn't intend.
 
 - `*`, `?`, `[...]` character classes (with `!`/`^` negation)
 - `**` for recursive matches (not expanded or validated beyond syntax)
-- `{a,b,c}` brace alternation, one level deep
+- `{a,b,c}` brace alternation, one level deep - duplicate branches are
+  deduped and a group left with one branch is flattened away
 - `\` escapes any of the characters above
 
 This is the informal dialect shared by most glob-consuming config files.

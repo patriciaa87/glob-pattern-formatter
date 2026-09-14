@@ -52,6 +52,7 @@ def normalize_pattern(pattern: str, *, lenient: bool = False) -> str:
     text = _normalize_backslashes(text, lenient=lenient, original=original)
     text = _normalize_path_separators(text, lenient=lenient, original=original)
     text = _normalize_brackets_and_braces(text, lenient=lenient, original=original)
+    text = _normalize_brace_alternation(text, lenient=lenient, original=original)
     return text
 
 
@@ -187,3 +188,118 @@ def _normalize_brackets_and_braces(text: str, *, lenient: bool, original: str) -
     for pos in problem_positions:
         chars[pos] = "\\" + chars[pos]
     return "".join(chars)
+
+
+def _split_brace_alternatives(content: str) -> list[str]:
+    """Split brace-group content on top-level commas, honoring backslash escapes."""
+    parts = []
+    current: list[str] = []
+    i = 0
+    n = len(content)
+    while i < n:
+        ch = content[i]
+        if ch == "\\" and i + 1 < n:
+            current.append(ch)
+            current.append(content[i + 1])
+            i += 2
+            continue
+        if ch == ",":
+            parts.append("".join(current))
+            current = []
+            i += 1
+            continue
+        current.append(ch)
+        i += 1
+    parts.append("".join(current))
+    return parts
+
+
+def _normalize_brace_alternation(text: str, *, lenient: bool, original: str) -> str:
+    """Collapse duplicate branches and flatten single-branch brace groups.
+
+    '{a,a,b}' and '{a}' are unambiguous - nobody could read them two
+    ways - but by the time a pattern has been through a few rounds of
+    editing they're just noise, so they're treated like every other
+    non-canonical form here: rejected in strict mode, rewritten in
+    lenient mode. By the time this runs, _normalize_brackets_and_braces
+    has already rejected (or, in lenient mode, escaped away) any nested
+    or unterminated brace, so every remaining unescaped '{' is known to
+    start a well-formed, single-level group.
+    """
+    n = len(text)
+    i = 0
+    in_bracket = False
+    bracket_start = -1
+    spans: list[tuple[int, int]] = []
+
+    while i < n:
+        ch = text[i]
+        if ch == "\\" and i + 1 < n:
+            i += 2
+            continue
+
+        if in_bracket:
+            is_literal_close = i == bracket_start + 1 or (
+                i == bracket_start + 2 and text[bracket_start + 1] in "!^"
+            )
+            if ch == "]" and not is_literal_close:
+                in_bracket = False
+            i += 1
+            continue
+
+        if ch == "[":
+            in_bracket = True
+            bracket_start = i
+            i += 1
+            continue
+
+        if ch == "{":
+            j = i + 1
+            while j < n:
+                if text[j] == "\\" and j + 1 < n:
+                    j += 2
+                    continue
+                if text[j] == "}":
+                    break
+                j += 1
+            spans.append((i, j))
+            i = j + 1
+            continue
+
+        i += 1
+
+    if not spans:
+        return text
+
+    pieces = []
+    cursor = 0
+    changed = False
+    for start, end in spans:
+        branches = _split_brace_alternatives(text[start + 1 : end])
+        deduped = []
+        seen = set()
+        for branch in branches:
+            if branch not in seen:
+                seen.add(branch)
+                deduped.append(branch)
+
+        if deduped == branches and len(deduped) > 1:
+            continue
+
+        if not lenient:
+            reason = (
+                "single-branch brace group"
+                if len(deduped) == 1
+                else "duplicate branch in brace alternation"
+            )
+            raise GlobSyntaxError(reason, pattern=original, position=start)
+
+        changed = True
+        pieces.append(text[cursor:start])
+        pieces.append(deduped[0] if len(deduped) == 1 else "{" + ",".join(deduped) + "}")
+        cursor = end + 1
+
+    if not changed:
+        return text
+    pieces.append(text[cursor:])
+    return "".join(pieces)
