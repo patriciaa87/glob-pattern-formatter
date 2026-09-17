@@ -167,6 +167,46 @@ class BraceAlternationTests(unittest.TestCase):
         )
 
 
+class NegationTests(unittest.TestCase):
+    def test_negated_pattern_unchanged(self):
+        self.assertEqual(normalize_pattern("!build/*.log"), "!build/*.log")
+
+    def test_strict_rejects_negated_pattern_with_ambiguity(self):
+        with self.assertRaises(GlobSyntaxError):
+            normalize_pattern("!./build/*.log")
+
+    def test_lenient_repairs_negated_pattern(self):
+        self.assertEqual(
+            normalize_pattern("!./build/*.log", lenient=True), "!build/*.log"
+        )
+
+    def test_lenient_dedups_inside_negated_brace_group(self):
+        self.assertEqual(
+            normalize_pattern("!*.{ts,ts,tsx}", lenient=True), "!*.{ts,tsx}"
+        )
+
+    def test_escaped_bang_is_not_negation(self):
+        self.assertEqual(normalize_pattern(r"\!important"), r"\!important")
+
+    def test_double_bang_only_first_is_negation(self):
+        self.assertEqual(normalize_pattern("!!foo"), "!!foo")
+
+    def test_strict_rejects_bare_bang(self):
+        with self.assertRaises(GlobSyntaxError):
+            normalize_pattern("!")
+
+    def test_lenient_escapes_bare_bang(self):
+        self.assertEqual(normalize_pattern("!", lenient=True), r"\!")
+
+    def test_error_pattern_includes_bang_prefix(self):
+        try:
+            normalize_pattern("!./build/*.log")
+        except GlobSyntaxError as exc:
+            self.assertEqual(exc.pattern, "!./build/*.log")
+        else:
+            self.fail("expected GlobSyntaxError")
+
+
 class ErrorDetailTests(unittest.TestCase):
     def test_error_carries_original_pattern(self):
         try:

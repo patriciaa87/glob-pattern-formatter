@@ -66,6 +66,23 @@ $ printf '*.{ts,ts,tsx}\nsrc/{only}/*.py\n' | python -m globfmt --lenient
 src/only/*.py
 ```
 
+## Negation
+
+A leading `!`, as in `.gitignore`, negates the pattern - it re-includes a
+path an earlier pattern excluded. The rest of the line is normalized like
+any other pattern, and the `!` is kept in front of the result:
+
+```
+$ printf '!./build/*.log\n' | python -m globfmt --lenient
+!build/*.log
+```
+
+Only the first `!` is a negation marker. A literal one - whether typed as
+`!!foo` or escaped as `\!foo` - is left as ordinary pattern text. A line
+that's just `!` with nothing to negate is rejected in strict mode, since
+there's no pattern for it to apply to; lenient mode escapes it to `\!`
+rather than guessing.
+
 ## CI use: --check and --diff
 
 `--check` exits with status 1 if any pattern isn't already normalized,
@@ -116,6 +133,7 @@ being silently rewritten in a way the author didn't intend.
 - `{a,b,c}` brace alternation, one level deep - duplicate branches are
   deduped and a group left with one branch is flattened away
 - `\` escapes any of the characters above
+- a leading `!` negates the whole pattern, as in `.gitignore`
 
 This is the informal dialect shared by most glob-consuming config files.
 It is not Python's `glob` module, which doesn't understand `{...}` at all.

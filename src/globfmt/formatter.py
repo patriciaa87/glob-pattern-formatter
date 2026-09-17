@@ -3,9 +3,10 @@
 The dialect assumed here is the informal one shared by most glob-consuming
 tools (npm's "files" field, .prettierignore, ripgrep-style ignore files,
 webpack loaders): '*', '?' and '[...]' character classes, '**' for
-recursive matches, '{a,b}' brace alternation, and '\\' as an escape
-character for any of those metacharacters. It is not tied to Python's own
-glob module, which doesn't understand braces at all.
+recursive matches, '{a,b}' brace alternation, '\\' as an escape character
+for any of those metacharacters, and a leading '!' as a .gitignore-style
+negation prefix. It is not tied to Python's own glob module, which doesn't
+understand braces or negation at all.
 
 A pattern is ambiguous whenever a human and a naive matcher could
 reasonably disagree about what it means - a backslash that might be an
@@ -49,11 +50,25 @@ def normalize_pattern(pattern: str, *, lenient: bool = False) -> str:
             raise GlobSyntaxError("leading or trailing whitespace", pattern=original)
         text = stripped
 
+    # A leading unescaped '!' is a .gitignore-style negation: it re-includes
+    # a path an earlier pattern excluded. Only the first '!' counts - a
+    # literal one (e.g. "!!foo" or "\!foo") is just part of the pattern.
+    negated = text.startswith("!")
+    if negated:
+        text = text[1:]
+
+    if negated and text == "":
+        if not lenient:
+            raise GlobSyntaxError(
+                "negation prefix '!' with no pattern to negate", pattern=original
+            )
+        return "\\!"
+
     text = _normalize_backslashes(text, lenient=lenient, original=original)
     text = _normalize_path_separators(text, lenient=lenient, original=original)
     text = _normalize_brackets_and_braces(text, lenient=lenient, original=original)
     text = _normalize_brace_alternation(text, lenient=lenient, original=original)
-    return text
+    return ("!" + text) if negated else text
 
 
 def _normalize_backslashes(text: str, *, lenient: bool, original: str) -> str:
