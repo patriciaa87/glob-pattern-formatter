@@ -10,9 +10,31 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [{ name = "patriciaa87" }]
+keywords = ["glob", "gitignore", "fnmatch", "linter", "formatter", "ci"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Source = "https://github.com/patriciaa87/glob-pattern-formatter"
+Issues = "https://github.com/patriciaa87/glob-pattern-formatter/issues"
 
 [project.scripts]
 globfmt = "globfmt.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+globfmt = ["py.typed"]

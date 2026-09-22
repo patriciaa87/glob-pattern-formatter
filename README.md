@@ -157,5 +157,6 @@ pip install -e .
 
 ## Status
 
-Early skeleton. See the issue tracker for what's missing before this is
-useful as more than a demo.
+Core normalization (backslashes, path separators, brackets, braces,
+negation) is implemented and covered by tests, along with `--check` and
+`--diff` for CI use. Not yet on PyPI - install from source until then.
